@@ -1,5 +1,6 @@
 import zxcvbn as zac
 import hashlib
+import re
 import streamlit as st
 from pwnedpasswords import pwnedpasswords as pwned
 
@@ -74,7 +75,7 @@ st.markdown("<br> </br>", unsafe_allow_html=True)
 # Prompting user for password input
 pwd = st.text_input("🔍Know how secure is your password: ", type="password", placeholder="Enter Your Password")
 if not pwd:
-    st.info("Please enter a password to evaluate its strength.")
+    st.info("Your passwords are never stored or transmitted in plain text. All evaluations are handled securely at every stage.")
     st.stop()
     
     
@@ -87,10 +88,9 @@ pwdh = hashlib.sha1(pwd.encode("utf-8")).hexdigest().upper()
 # Calling the evaluation function
 eval= zac.zxcvbn(pwd)
 cout= pwned.check(pwdh)
-
-
     
 # collecting all the measures Available
+regexeval=[]
 Measures = [eval['guesses'],
             eval['guesses_log10'],
             eval['score'],
@@ -100,10 +100,7 @@ Measures = [eval['guesses'],
             eval['password'],
             eval['sequence'],
             eval['feedback'],
-            cout]
-
-
-
+            cout,]
 
 # --- Display Breach Results ---
 if Measures[9]>0:
@@ -115,32 +112,71 @@ else:
     
 # --- Password Strength Score Interpretation ---
 if eval['score']==0:
-    st.error(f"the password is very weak")
+    st.error(f"The password is very weak")
 elif eval['score']==1:
-    st.warning(f"the password is weak")
+    st.warning(f"The password is weak")
 elif eval['score']==2:
-    st.info(f"the password is fair")
+    st.info(f"The password is fair")
 elif eval['score']==3:
-    st.success(f"the password is strong")
+    st.success(f"The password is strong")
 else:
-    st.success(f"the password is very strong")
+    st.success(f"The password is very strong")
     
 
 
+st.markdown("<br> </br>", unsafe_allow_html=True)
 st.markdown("<br> </br>", unsafe_allow_html=True)
 st.divider()
    
 # --- Insights ---
-st.markdown('<span style="color:#33ff99; font-size:1.5em;">Password Strength Insights :</span>', unsafe_allow_html=True)
-st.write(f"***Crack Time :***    {eval['crack_times_display']['offline_fast_hashing_1e10_per_second']}")
-st.write(f"***Feedback :***    {Measures[8]['warning'] if Measures[8]['warning'] else 'No warnings'}")
-st.write(f"***Suggestion :***    {Measures[8]['suggestions'] if Measures[8]['suggestions'] else 'No suggestions'}")
+st.markdown('<span style="color:#33ff99; font-size:1.5em;">Detailed Analysis </span>', unsafe_allow_html=True)
+st.write(f"<span style='color:#5595d4'>***Crack Time :***</span>    {eval['crack_times_display']['offline_fast_hashing_1e10_per_second']}",unsafe_allow_html = True)
+st.write(f"<span style='color:#5595d4'>***Feedback :***</span>    {Measures[8]['warning'] if Measures[8]['warning'] else 'No warnings'}",unsafe_allow_html = True)
+
+suggestions = Measures[8].get('suggestions', []) if isinstance(Measures[8], dict) else Measures[8]
+if isinstance(suggestions, list):
+    suggestion_text = ", ".join(suggestions) if suggestions else "No suggestions"
+else:
+    suggestion_text = str(suggestions) if suggestions else "No suggestions"
+
+st.write(f"<span style='color:#5595d4'>***Suggestion :***</span>    {suggestion_text}", unsafe_allow_html=True)
+
+# --- Regex Evaluations ---
+
+# checking for numbers
+pattern1 = r'(?=.*\d)'
+if not re.search(pattern1, pwd):
+    regexeval.append('Add Numbers to your password')
+
+# checking for length
+if len(pwd) < 12:
+    regexeval.append('Increase Length of your Password to at least 12 characters.')
+
+# checking for uppercase letters
+pattern2 = r'(?=.*[A-Z])'
+if not re.search(pattern2, pwd):
+    regexeval.append('Add Uppercase letters to your password')
+
+# checking for special characters
+pattern3 = r'[!@#$%^&*()_+{}\[\]:;"\'<>?,./`~\\|\-]'
+if not re.search(pattern3, pwd):
+    regexeval.append('Add Special Characters to your password')
+    
+# Displaying regex evaluation results
+while True:
+    if regexeval:
+        st.markdown("<span style= 'color:#5595d4'>***Additional Recommendations:***</span>", unsafe_allow_html = True)
+        for recommendation in regexeval:
+            st.write(f"- {recommendation}")
+    break
+    
 st.markdown("<br> </br>", unsafe_allow_html=True)
 
     
 # --- Info Section ---
+st.markdown("### <span style='color:#FF0000'>⚠️ Attention!!</span> ###", unsafe_allow_html = True)
+
 st.markdown("""
-### ⚠️ Attention!!
 **Using weak passwords:**  
 Weak passwords like `123456` or `qwerty` are easy to guess and vulnerable to brute-force attacks.  
 Avoid simplicity – it increases the risk of unauthorized access.
@@ -148,7 +184,7 @@ Avoid simplicity – it increases the risk of unauthorized access.
 **Notice:**
 Your passwords are never stored, never shared, and never transmitted in plain text.
 All evaluations happen securely on your own device.
-""")
+""",unsafe_allow_html = True)
 
 st.divider()
 
